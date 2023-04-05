@@ -33,7 +33,6 @@ void *encoder_multithreaded()
         Task *task = dequeue_task(&task_queue);
         if(task == NULL){
             pthread_mutex_unlock(&encoded_mutex);
-            pthread_exit(NULL);
         } else{
             int size = 0;
             char* encoded = malloc(sizeof(char*) * 20000);
@@ -54,10 +53,7 @@ void *encoder_multithreaded()
             }
             encoded[index++] = prev_char;
             encoded[index++] = char_count;
-            //printf("%d", encoded[index - 1]);
-            encoded[index] = '\0';
-            //printf("%s \n", encoded);
-            size+=2;
+            size +=2;
             enqueue_result(&result_queue, encoded, task->task_id, size);
             pthread_mutex_unlock(&encoded_mutex);
         }
@@ -193,21 +189,16 @@ int main(int argc, char *argv[])
     }
     if (thread_count > 1)
         { 
-            //task_queue.done = 1;            
-            //pthread_cond_broadcast(&task_queue.empty);
-
             int processed_results = 0;
             Result **all_results = malloc(sizeof(Result) * 250000);
             int result_index = 0;
             int index = 0;
             char last_char;
-            //unsigned int last_count = 0;
+            unsigned int last_count = 0;
             int exit = 0;
             while(1){
                 if(processed_results == total_results){
                     result_queue.done = 1;
-                    task_queue.done = 1;
-                    pthread_cond_broadcast(&task_queue.empty);
                 }
                 while(all_results[result_index] == NULL){
                      Result *result = dequeue_result(&result_queue); 
@@ -223,38 +214,36 @@ int main(int argc, char *argv[])
                     break;
                 }
                 Result *to_process = all_results[result_index];
-                //printf("%s \n", to_process->encoded);
-                
                 char* encoded = to_process->encoded;
-                //printf("%s \n", encoded);
-                int len = to_process->size;
+               int len = to_process->size;
                 if(index == 0){
                     last_char = encoded[len - 2];
                     last_count = encoded[len - 1];
-                   // write(output, encoded, len - 1);
+                    write(output, encoded, len - 1);
                 } else{
                     if(encoded[0] == last_char){
-                        //unsigned int sum = last_count + encoded[1];
-                        //write(output, &sum, 1);
-                        //write(output, encoded + 2, len - 3);
+                        unsigned int sum = last_count + encoded[1];
+                        if(len > 2){
+                            write(output, &sum, 1);
+                            write(output, encoded + 2, len - 3);
+                            last_char = encoded[len - 2];
+                            last_count = encoded[len - 1];
+                        } else{
+                            last_char = encoded[len - 2];
+                            last_count = sum;
+                        }
                     } else{
-                        //write(output, &last_count, 1);
-                        //write(output, encoded, len - 1);
+                        write(output, &last_count, 1);
+                        write(output, encoded, len - 1);
+                        last_char = encoded[len - 2];
+                        last_count = encoded[len - 1];
                     }
-                    last_char = encoded[len - 2];
-                    last_count = encoded[len - 1];
-                    if(index == total_results - 1){
-                       //write(output, &last_count, 1);
-                    }
+                }
+                if(index == total_results - 1){
+                    write(output, &last_count, 1);
                 }
                 result_index++;
                 processed_results++;
             }
- 
-
-            for(int i = 0; i < thread_count; i++){
-                pthread_join(threads[i], NULL);
-            }
-            
         }
 }

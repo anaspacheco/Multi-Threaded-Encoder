@@ -57,4 +57,3 @@ void free_result_queue(ResultQueue *queue){
     pthread_cond_destroy(&queue->empty);
 }
 
-

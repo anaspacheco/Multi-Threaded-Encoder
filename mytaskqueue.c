@@ -57,4 +57,3 @@ void free_task_queue(TaskQueue *queue){
     pthread_cond_destroy(&queue->empty);
 }
 
-
