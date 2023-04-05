@@ -50,7 +50,6 @@ Task* dequeue_task(TaskQueue *queue){
         queue->task_count--;
         pthread_mutex_unlock(&queue->mutex);
         return task;
-    
 }
 
 void free_task_queue(TaskQueue *queue){
