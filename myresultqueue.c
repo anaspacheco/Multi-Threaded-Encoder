@@ -27,7 +27,7 @@ void enqueue_result(ResultQueue *queue, char* character, int result_id, int size
         queue-> head = result; queue -> tail = result;
     }
     queue->result_num++;
-
+    pthread_cond_signal(&queue->empty); // Signal to consumers that the queue is not empty anymore 
     pthread_mutex_unlock(&queue->mutex); // Unlock mutex so that other producers can access the queue 
 }
 

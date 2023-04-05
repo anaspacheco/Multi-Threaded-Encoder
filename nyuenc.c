@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,18 +24,20 @@ int task_id = 0;
 
 int total_results = 0;
 //int total_mem_files = 0;
+pthread_mutex_t encoded_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 void *encoder_multithreaded()
 {
     while(1){
+        pthread_mutex_lock(&encoded_mutex);
         Task *task = dequeue_task(&task_queue);
         if(task == NULL){
+            pthread_mutex_unlock(&encoded_mutex);
             pthread_exit(NULL);
         } else{
             int size = 0;
-            char* encoded = malloc(sizeof(char) * 2000);
+            char* encoded = malloc(sizeof(char*) * 20000);
             char* addr = task->chunk_address;
-            
             unsigned int char_count = 0;
             int index = 0;
             char prev_char = addr[0];
@@ -53,10 +54,12 @@ void *encoder_multithreaded()
             }
             encoded[index++] = prev_char;
             encoded[index++] = char_count;
+            //printf("%d", encoded[index - 1]);
             encoded[index] = '\0';
+            //printf("%s \n", encoded);
             size+=2;
-            enqueue_result(&result_queue,encoded, task->task_id, size);
-            //pthread_cond_signal(&result_queue.empty);
+            enqueue_result(&result_queue, encoded, task->task_id, size);
+            pthread_mutex_unlock(&encoded_mutex);
         }
         } 
         return NULL;
@@ -124,23 +127,31 @@ int main(int argc, char *argv[])
 
         if (thread_count > 1)
         {
-
             int chunk_size = 4096; // 4KB
-            //total_mem_files += sb.st_size;
 
             int chunk_count = sb.st_size / chunk_size + (sb.st_size % chunk_size != 0);
+            //printf("%d", chunk_count);
+
             total_results += chunk_count;
             // printf("%d \n", chunk_count);
 
             char *mem_address;
-
+            //mem_address = addr;
+             
             for (int j = 0; j < chunk_count; j++)
             {
+                mem_address = addr + j * chunk_size;
                 if (j == chunk_count - 1)
                 {
                     chunk_size = sb.st_size - j * chunk_size;
                 }
-                mem_address = addr + j * chunk_size;
+                /*
+                 for (int i = 0; i < chunk_size; i++)
+                {
+                    printf("%c ", mem_address[i]); // Print the character at each index of mem_address
+                }
+                printf("\n");
+                */
                 enqueue_task(&task_queue, mem_address, chunk_size, task_id++);
             }
         }
@@ -182,19 +193,21 @@ int main(int argc, char *argv[])
     }
     if (thread_count > 1)
         { 
-            task_queue.done = 1;            
+            //task_queue.done = 1;            
             //pthread_cond_broadcast(&task_queue.empty);
 
             int processed_results = 0;
-            Result **all_results = malloc(sizeof(Result) * 300000);
+            Result **all_results = malloc(sizeof(Result) * 250000);
             int result_index = 0;
             int index = 0;
             char last_char;
-            unsigned int last_count = 0;
+            //unsigned int last_count = 0;
             int exit = 0;
             while(1){
                 if(processed_results == total_results){
                     result_queue.done = 1;
+                    task_queue.done = 1;
+                    pthread_cond_broadcast(&task_queue.empty);
                 }
                 while(all_results[result_index] == NULL){
                      Result *result = dequeue_result(&result_queue); 
@@ -204,37 +217,40 @@ int main(int argc, char *argv[])
                      } else{
                         index = result->result_id;
                         all_results[index] = result;
-
                     }
                 }
                 if(exit){
                     break;
                 }
                 Result *to_process = all_results[result_index];
+                //printf("%s \n", to_process->encoded);
+                
                 char* encoded = to_process->encoded;
+                //printf("%s \n", encoded);
                 int len = to_process->size;
                 if(index == 0){
                     last_char = encoded[len - 2];
                     last_count = encoded[len - 1];
-                    write(output, encoded, len - 1);
+                   // write(output, encoded, len - 1);
                 } else{
                     if(encoded[0] == last_char){
-                        unsigned int sum = last_count + encoded[1];
-                        write(output, &sum, 1);
-                        write(output, encoded + 2, len - 3);
+                        //unsigned int sum = last_count + encoded[1];
+                        //write(output, &sum, 1);
+                        //write(output, encoded + 2, len - 3);
                     } else{
-                        write(output, &last_count, 1);
-                        write(output, encoded, len - 1);
+                        //write(output, &last_count, 1);
+                        //write(output, encoded, len - 1);
                     }
                     last_char = encoded[len - 2];
                     last_count = encoded[len - 1];
                     if(index == total_results - 1){
-                        write(output, &last_count, 1);
+                       //write(output, &last_count, 1);
                     }
                 }
                 result_index++;
                 processed_results++;
             }
+ 
 
             for(int i = 0; i < thread_count; i++){
                 pthread_join(threads[i], NULL);
