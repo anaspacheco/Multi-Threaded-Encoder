@@ -23,7 +23,6 @@ ResultQueue result_queue;
 int task_id = 0;
 
 int total_results = 0;
-//int total_mem_files = 0;
 pthread_mutex_t encoded_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 void *encoder_multithreaded()
@@ -126,13 +125,10 @@ int main(int argc, char *argv[])
             int chunk_size = 4096; // 4KB
 
             int chunk_count = sb.st_size / chunk_size + (sb.st_size % chunk_size != 0);
-            //printf("%d", chunk_count);
 
             total_results += chunk_count;
-            // printf("%d \n", chunk_count);
 
             char *mem_address;
-            //mem_address = addr;
              
             for (int j = 0; j < chunk_count; j++)
             {
@@ -141,13 +137,6 @@ int main(int argc, char *argv[])
                 {
                     chunk_size = sb.st_size - j * chunk_size;
                 }
-                /*
-                 for (int i = 0; i < chunk_size; i++)
-                {
-                    printf("%c ", mem_address[i]); // Print the character at each index of mem_address
-                }
-                printf("\n");
-                */
                 enqueue_task(&task_queue, mem_address, chunk_size, task_id++);
             }
         }
