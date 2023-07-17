@@ -3,9 +3,9 @@ CFLAGS=-g -pedantic -std=gnu17 -Wall -Werror -Wextra
 LDFLAGS=-pthread
 
 .PHONY: all
-all: nyuenc
+all: encoder
 
-nyuenc: nyuenc.c mytaskqueue.o myresultqueue.o
+encoder: encoder.c mytaskqueue.o myresultqueue.o
 
 mytaskqueue.o: mytaskqueue.c mytaskqueue.h
 
@@ -13,4 +13,4 @@ myresultqueue.o: mytaskqueue.c mytaskqueue.h
 
 .PHONY: clean
 clean:
-	rm -f *.o nyuenc
+	rm -f *.o encoder
