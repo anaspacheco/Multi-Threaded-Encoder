@@ -178,6 +178,7 @@ int main(int argc, char *argv[])
     }
     if (thread_count > 1)
         { 
+            //Note: this can be done more efficiently, could accept suggestions
             int processed_results = 0;
             Result **all_results = malloc(sizeof(Result) * 250000);
             int result_index = 0;
